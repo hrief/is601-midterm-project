@@ -156,7 +156,7 @@ def test_permission_errors(tmp_path, monkeypatch):
     monkeypatch.setattr(pd, "read_csv", denied)
     with pytest.raises(HistoryError, match="Cannot load history.*Permission denied"):
         history.load(str(tmp_path / "history.csv"))
-    monkeypatch.setattr("app.history.logging.FileHandler", denied)
+    monkeypatch.setattr("app.logger.logging.FileHandler", denied)
     with pytest.raises(HistoryError, match="Cannot open calculation log"):
         LoggingObserver(str(tmp_path / "audit.log"))
 

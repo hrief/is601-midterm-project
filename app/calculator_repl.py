@@ -1,10 +1,36 @@
+import os
+import sys
+
+from colorama import Fore, Style, init
+
 from app.calculation import Calculation
 from app.calculator_config import CalculatorConfig
 from app.calculator_memento import CalculatorMemento, MementoCaretaker
-from app.exceptions import CalculatorError, HistoryError
+from app.exceptions import CalculatorError, HistoryError, OperationError
 from app.history import AutoSaveObserver, History, LoggingObserver
 from app.input_validators import validate_number, validate_operation
 from app.operations import OperationFactory
+
+
+OUTPUT_COLORS = {
+    "success": Fore.GREEN,
+    "error": Fore.RED,
+    "warning": Fore.YELLOW,
+    "info": Fore.CYAN,
+    "history": Fore.BLUE,
+}
+
+
+def print_message(message: str, kind: str = "info") -> None:
+    """Color terminal output while keeping redirected output readable."""
+    use_color = (
+        sys.stdout.isatty()
+        and os.getenv("TERM") != "dumb"
+        and "NO_COLOR" not in os.environ
+    )
+    if use_color:
+        message = f"{OUTPUT_COLORS[kind]}{message}{Style.RESET_ALL}"
+    print(message)
 
 
 class Calculator:
@@ -28,7 +54,7 @@ class Calculator:
             self.history.load(self.config.history_path)
         except HistoryError as exc:
             self.logging_observer.logger.error("%s", exc)
-            print(f"Error: {exc}")
+            print_message(f"Error: {exc}", "error")
 
     def close(self) -> None:
         """Release resources owned by the calculator."""
@@ -111,7 +137,7 @@ class Calculator:
 
 def print_help() -> None:
     """Display available calculator commands."""
-    print(
+    print_message(
         """
 Available operations:
   add
@@ -149,10 +175,15 @@ Examples:
 
 def run_repl() -> None:
     """Run the calculator Read-Eval-Print Loop."""
-    calculator = Calculator()
+    init()
+    try:
+        calculator = Calculator()
+    except CalculatorError as exc:
+        print_message(f"Error: {exc}", "error")
+        return
 
-    print("Advanced Calculator")
-    print("Type 'help' for available commands.")
+    print_message("Advanced Calculator")
+    print_message("Type 'help' for available commands.")
 
     while True:
         try:
@@ -165,7 +196,7 @@ def run_repl() -> None:
             command = parts[0].lower()
 
             if command == "exit":
-                print("Goodbye!")
+                print_message("Goodbye!", "success")
                 break
 
             if command == "help":
@@ -176,44 +207,44 @@ def run_repl() -> None:
                 history = calculator.get_history()
 
                 if history.empty:
-                    print("No calculations in history.")
+                    print_message("No calculations in history.", "warning")
                 else:
-                    print(history.to_string(index=False))
+                    print_message(history.to_string(index=False), "history")
                 continue
 
             if command == "clear":
                 calculator.clear_history()
-                print("History cleared.")
+                print_message("History cleared.", "success")
                 continue
 
             if command == "undo":
                 if calculator.undo():
-                    print("Undo successful.")
+                    print_message("Undo successful.", "success")
                 else:
-                    print("Nothing to undo.")
+                    print_message("Nothing to undo.", "warning")
                 continue
 
             if command == "redo":
                 if calculator.redo():
-                    print("Redo successful.")
+                    print_message("Redo successful.", "success")
                 else:
-                    print("Nothing to redo.")
+                    print_message("Nothing to redo.", "warning")
                 continue
 
             if command == "save":
                 calculator.save_history()
-                print("History saved.")
+                print_message("History saved.", "success")
                 continue
 
             if command == "load":
                 calculator.load_history()
-                print("History loaded.")
+                print_message("History loaded.", "success")
                 continue
 
             if command in calculator.get_operations():
                 if len(parts) != 3:
-                    print(
-                        "Usage: <operation> <number1> <number2>"
+                    print_message(
+                        "Usage: <operation> <number1> <number2>", "error"
                     )
                     continue
 
@@ -222,19 +253,19 @@ def run_repl() -> None:
                     parts[2],
                     command,
                 )
-                print(f"Result: {result}")
+                print_message(f"Result: {result}", "success")
                 continue
 
-            print(f"Unknown command: {command}")
+            print_message(f"Unknown command: {command}", "error")
 
+        except (OperationError, ValueError, ZeroDivisionError, OverflowError) as exc:
+            calculator.logging_observer.logger.warning("%s", exc)
+            print_message(f"Error: {exc}", "error")
         except CalculatorError as exc:
             calculator.logging_observer.logger.error("%s", exc)
-            print(f"Error: {exc}")
-        except (ValueError, ZeroDivisionError, OverflowError) as exc:
-            calculator.logging_observer.logger.warning("%s", exc)
-            print(f"Error: {exc}")
+            print_message(f"Error: {exc}", "error")
         except (EOFError, KeyboardInterrupt):
-            print("\nGoodbye!")
+            print_message("\nGoodbye!", "success")
             break
 
     calculator.close()

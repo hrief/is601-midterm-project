@@ -7,3 +7,5 @@ htmlcov/
 .env
 history.csv
 logs/
+# Local PowerShell module analysis cache
+Microsoft/

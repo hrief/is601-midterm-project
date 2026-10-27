@@ -1,9 +1,9 @@
 from abc import ABC, abstractmethod
 from pathlib import Path
-import logging
 import math
 
 from app.exceptions import HistoryError
+from app.logger import Logger
 from app.operations import OperationFactory
 
 import pandas as pd
@@ -35,15 +35,7 @@ class LoggingObserver(HistoryObserver):
 
     def __init__(self, file_path: str = "logs/calculator.log",
                  encoding: str = "utf-8") -> None:
-        self.logger = logging.Logger(f"calculator.{id(self)}", logging.INFO)
-        try:
-            path = Path(file_path)
-            path.parent.mkdir(parents=True, exist_ok=True)
-            handler = logging.FileHandler(path, encoding=encoding)
-        except (OSError, ValueError) as exc:
-            raise HistoryError(f"Cannot open calculation log '{file_path}': {exc}") from exc
-        handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
-        self.logger.addHandler(handler)
+        self.logger = Logger(file_path, encoding)
 
     def update(self, history: "History") -> None:
         if history.last_calculation is not None:
@@ -58,9 +50,7 @@ class LoggingObserver(HistoryObserver):
 
     def close(self) -> None:
         """Release log file handles."""
-        for handler in self.logger.handlers[:]:
-            handler.close()
-            self.logger.removeHandler(handler)
+        self.logger.close()
 
 
 class History:
@@ -80,6 +70,14 @@ class History:
     def dataframe(self) -> pd.DataFrame:
         """Return a copy of the history DataFrame."""
         return self._history.copy()
+
+    @property
+    def calculations(self) -> list[Calculation]:
+        """Return independent calculation objects reconstructed from history."""
+        return [
+            Calculation.from_dict(row)
+            for row in self._history.to_dict("records")
+        ]
 
     def add_observer(self, observer: HistoryObserver) -> None:
         """Register a history observer."""
@@ -147,7 +145,14 @@ class History:
                 for value in frame["timestamp"].dropna():
                     pd.to_datetime(value, utc=True, errors="raise")
                 frame["timestamp"] = frame["timestamp"].fillna("")
-            self._history = frame[self.COLUMNS].tail(self.max_history).reset_index(drop=True)
+            calculations = [
+                Calculation.from_dict(row)
+                for row in frame.tail(self.max_history).to_dict("records")
+            ]
+            self._history = pd.DataFrame(
+                [calculation.to_dict() for calculation in calculations],
+                columns=self.COLUMNS,
+            )
             self.last_calculation = None
         except FileNotFoundError:
             self._history = pd.DataFrame(columns=self.COLUMNS)
