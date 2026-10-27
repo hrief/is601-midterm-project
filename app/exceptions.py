@@ -12,3 +12,6 @@ class ValidationError(CalculatorError):
 
 class OperationError(CalculatorError):
     """Raised when a calculator operation fails."""
+
+class HistoryError(CalculatorError):
+    """Raised when history cannot be saved or loaded."""

@@ -1,11 +1,16 @@
+import math
+
 from app.exceptions import ValidationError
 from app.operations import OperationFactory
 
 
-def validate_number(value: str) -> float:
+def validate_number(value: str, max_value: float = float("inf")) -> float:
     """Validate and convert a string to a float."""
     try:
-        return float(value)
+        number = float(value)
+        if not math.isfinite(number) or abs(number) > max_value:
+            raise ValueError("Number must be finite and within the configured maximum.")
+        return number
     except (ValueError, TypeError) as exc:
         raise ValidationError(
             f"Invalid number: {value}"

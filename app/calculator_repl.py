@@ -1,8 +1,8 @@
 from app.calculation import Calculation
 from app.calculator_config import CalculatorConfig
 from app.calculator_memento import CalculatorMemento, MementoCaretaker
-from app.exceptions import CalculatorError
-from app.history import AutoSaveObserver, History
+from app.exceptions import CalculatorError, HistoryError
+from app.history import AutoSaveObserver, History, LoggingObserver
 from app.input_validators import validate_number, validate_operation
 from app.operations import OperationFactory
 
@@ -12,15 +12,27 @@ class Calculator:
 
     def __init__(self, config: CalculatorConfig | None = None) -> None:
         self.config = config or CalculatorConfig.from_env()
-        self.history = History()
+        self.history = History(self.config.max_history, self.config.default_encoding)
+        self.logging_observer = LoggingObserver(
+            self.config.log_path, self.config.default_encoding,
+        )
+        self.history.add_observer(self.logging_observer)
         self.caretaker = MementoCaretaker()
 
         if self.config.auto_save:
             self.history.add_observer(
-                AutoSaveObserver(self.config.history_file)
+                AutoSaveObserver(self.config.history_path)
             )
 
-        self.history.load(self.config.history_file)
+        try:
+            self.history.load(self.config.history_path)
+        except HistoryError as exc:
+            self.logging_observer.logger.error("%s", exc)
+            print(f"Error: {exc}")
+
+    def close(self) -> None:
+        """Release resources owned by the calculator."""
+        self.logging_observer.close()
 
     def _create_memento(self) -> CalculatorMemento:
         """Create a snapshot of the current calculator state."""
@@ -37,11 +49,9 @@ class Calculator:
         operation: str,
     ) -> float:
         """Validate input, perform a calculation, and store it."""
-        number1 = validate_number(operand1)
-        number2 = validate_number(operand2)
+        number1 = validate_number(operand1, self.config.max_input_value)
+        number2 = validate_number(operand2, self.config.max_input_value)
         operation_name = validate_operation(operation)
-
-        self.caretaker.save(self._create_memento())
 
         calculation = Calculation.create(
             number1,
@@ -49,6 +59,8 @@ class Calculator:
             operation_name,
         )
 
+        calculation.result = round(calculation.result, self.config.precision)
+        self.caretaker.save(self._create_memento())
         self.history.add(calculation)
         return calculation.result
 
@@ -79,11 +91,14 @@ class Calculator:
 
     def save_history(self) -> None:
         """Manually save calculator history."""
-        self.history.save(self.config.history_file)
+        self.history.save(self.config.history_path)
 
     def load_history(self) -> None:
         """Manually load calculator history."""
-        self.history.load(self.config.history_file)
+        previous = self._create_memento()
+        self.history.load(self.config.history_path)
+        self.caretaker.save(previous)
+        self.history.restore(self.history.dataframe)
 
     def get_history(self):
         """Return calculation history."""
@@ -213,12 +228,16 @@ def run_repl() -> None:
             print(f"Unknown command: {command}")
 
         except CalculatorError as exc:
+            calculator.logging_observer.logger.error("%s", exc)
             print(f"Error: {exc}")
-        except (ValueError, ZeroDivisionError) as exc:
+        except (ValueError, ZeroDivisionError, OverflowError) as exc:
+            calculator.logging_observer.logger.warning("%s", exc)
             print(f"Error: {exc}")
         except (EOFError, KeyboardInterrupt):
             print("\nGoodbye!")
             break
+
+    calculator.close()
 
 
 if __name__ == "__main__": # pragma: no cover

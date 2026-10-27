@@ -50,6 +50,7 @@ def test_calculation_to_dict():
         "operand2": 5,
         "operation": "add",
         "result": 15,
+        "timestamp": calculation.timestamp,
     }
 
 

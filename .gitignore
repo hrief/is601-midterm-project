@@ -6,3 +6,4 @@ __pycache__/
 htmlcov/
 .env
 history.csv
+logs/

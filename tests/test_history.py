@@ -163,17 +163,18 @@ def test_restore_uses_copy():
     assert history.dataframe.loc[0, "result"] == 2
 
 
-def test_logging_observer(capsys):
+def test_logging_observer(tmp_path):
     """Test the logging observer."""
     history = History()
-    observer = LoggingObserver()
+    observer = LoggingObserver(str(tmp_path / "calculator.log"))
 
     history.add_observer(observer)
     history.add(Calculation.create(5, 3, "add"))
 
-    captured = capsys.readouterr()
+    observer.close()
+    output = (tmp_path / "calculator.log").read_text()
 
-    assert "History updated. 1 calculation(s) stored." in captured.out
+    assert "operation=add operand1=5 operand2=3 result=8 timestamp=" in output
 
 
 def test_autosave_observer(tmp_path):
@@ -218,25 +219,26 @@ def test_remove_unregistered_observer():
     assert len(history) == 0
 
 
-def test_clear_notifies_observer(capsys):
+def test_clear_notifies_observer(tmp_path):
     """Test that clearing history notifies observers."""
     history = History()
-    observer = LoggingObserver()
+    observer = LoggingObserver(str(tmp_path / "calculator.log"))
 
     history.add(Calculation.create(5, 3, "add"))
     history.add_observer(observer)
 
     history.clear()
 
-    captured = capsys.readouterr()
+    observer.close()
+    output = (tmp_path / "calculator.log").read_text()
 
-    assert "History updated. 0 calculation(s) stored." in captured.out
+    assert "History updated. 0 calculation(s) stored." in output
 
 
-def test_restore_notifies_observer(capsys):
+def test_restore_notifies_observer(tmp_path):
     """Test that restoring history notifies observers."""
     history = History()
-    observer = LoggingObserver()
+    observer = LoggingObserver(str(tmp_path / "calculator.log"))
     history.add_observer(observer)
 
     state = pd.DataFrame(
@@ -252,9 +254,10 @@ def test_restore_notifies_observer(capsys):
 
     history.restore(state)
 
-    captured = capsys.readouterr()
+    observer.close()
+    output = (tmp_path / "calculator.log").read_text()
 
-    assert "History updated. 1 calculation(s) stored." in captured.out
+    assert "History updated. 1 calculation(s) stored." in output
 
 
 def test_abstract_history_observer():

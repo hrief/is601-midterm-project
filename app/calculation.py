@@ -1,4 +1,5 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
 
 from app.operations import Operation, OperationFactory
 
@@ -11,6 +12,7 @@ class Calculation:
     operand2: float
     operation_name: str
     result: float
+    timestamp: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
     @classmethod
     def create(
@@ -37,4 +39,5 @@ class Calculation:
             "operand2": self.operand2,
             "operation": self.operation_name,
             "result": self.result,
+            "timestamp": self.timestamp,
         }
