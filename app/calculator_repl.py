@@ -105,6 +105,10 @@ Available operations:
   divide
   power
   root
+  modulus
+  int_divide
+  percent
+  abs_diff
 
 Commands:
   help     Show this help message

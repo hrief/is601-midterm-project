@@ -54,6 +54,32 @@ class Root(Operation):
         return a ** (1 / b)
 
 
+class Modulus(Operation):
+    def execute(self, a: float, b: float) -> float:
+        if b == 0:
+            raise ZeroDivisionError("Cannot calculate modulus by zero.")
+        return a % b
+
+
+class IntegerDivision(Operation):
+    def execute(self, a: float, b: float) -> float:
+        if b == 0:
+            raise ZeroDivisionError("Cannot divide by zero.")
+        return a // b
+
+
+class Percentage(Operation):
+    def execute(self, a: float, b: float) -> float:
+        if b == 0:
+            raise ZeroDivisionError("Cannot calculate percentage with a zero denominator.")
+        return (a / b) * 100
+
+
+class AbsoluteDifference(Operation):
+    def execute(self, a: float, b: float) -> float:
+        return abs(a - b)
+
+
 class OperationFactory:
     """Factory responsible for creating operation strategies."""
 
@@ -64,6 +90,10 @@ class OperationFactory:
         "divide": Division,
         "power": Power,
         "root": Root,
+        "modulus": Modulus,
+        "int_divide": IntegerDivision,
+        "percent": Percentage,
+        "abs_diff": AbsoluteDifference,
     }
 
     @classmethod

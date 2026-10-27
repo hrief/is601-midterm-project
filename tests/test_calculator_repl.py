@@ -30,6 +30,10 @@ def calculator(config):
         ("10", "2", "divide", 5),
         ("2", "8", "power", 256),
         ("25", "2", "root", 5),
+        ("10", "3", "modulus", 1),
+        ("10", "3", "int_divide", 3),
+        ("25", "200", "percent", 12.5),
+        ("5", "12", "abs_diff", 7),
     ],
 )
 def test_calculator_operations(calculator, a, b, operation, expected):
@@ -150,6 +154,10 @@ def test_get_operations(calculator):
         "divide",
         "power",
         "root",
+        "modulus",
+        "int_divide",
+        "percent",
+        "abs_diff"
     )
 
 

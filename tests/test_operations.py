@@ -9,6 +9,10 @@ from app.operations import (
     Power,
     Root,
     Subtraction,
+    Modulus,
+    IntegerDivision,
+    Percentage,
+    AbsoluteDifference
 )
 
 
@@ -28,6 +32,14 @@ from app.operations import (
         (Root(), 25, 2, 5),
         (Root(), 27, 3, 3),
         (Root(), -27, 3, -3),
+        (Modulus(), 10, 3, 1),
+        (Modulus(), 15, 4, 3),
+        (IntegerDivision(), 10, 3, 3),
+        (IntegerDivision(), 15, 4, 3),
+        (Percentage(), 25, 200, 12.5),
+        (Percentage(), 50, 200, 25.0),
+        (AbsoluteDifference(), 5, 12, 7),
+        (AbsoluteDifference(), 12, 5, 7),
     ],
 )
 def test_operations(operation, a, b, expected):
@@ -76,6 +88,15 @@ def test_invalid_negative_roots(number, degree):
         ("power", Power),
         ("root", Root),
         ("ADD", Addition),
+        ("SUBTRACT", Subtraction),
+        ("MULTIPLY", Multiplication),
+        ("DIVIDE", Division),
+        ("POWER", Power),
+        ("ROOT", Root),
+        ("modulus", Modulus),
+        ("int_divide", IntegerDivision),
+        ("percent", Percentage),
+        ("abs_diff", AbsoluteDifference)
     ],
 )
 def test_operation_factory(name, expected_type):
@@ -102,6 +123,10 @@ def test_supported_operations():
         "divide",
         "power",
         "root",
+        "modulus",
+        "int_divide",
+        "percent",
+        "abs_diff"
     )
 
 
@@ -109,3 +134,18 @@ def test_abstract_operation():
     """Test that Operation cannot be instantiated."""
     with pytest.raises(TypeError):
         Operation()
+@pytest.mark.parametrize(
+    "operation",
+    [
+        Modulus(),
+        IntegerDivision(),
+        Percentage(),
+    ],
+)
+def test_division_by_zero_operations(operation):
+    """Test division by zero for operations that involve division."""
+    with pytest.raises(
+        ZeroDivisionError,
+        match="Cannot",
+    ):
+        operation.execute(10, 0)
